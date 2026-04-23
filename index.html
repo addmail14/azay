@@ -18,6 +18,14 @@
 
         p { margin-bottom: 15px; }
 
+        /* Laser Cursor Class */
+        body.laser-active, 
+        body.laser-active .presentation-wrapper,
+        body.laser-active .slide-container,
+        body.laser-active * {
+            cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="10" fill="red" stroke="white" stroke-width="3" opacity="0.9"/></svg>') 16 16, auto !important;
+        }
+
         body {
             background-color: #1e293b;
             font-family: 'Prompt', sans-serif;
@@ -26,7 +34,6 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            /* Fix for mobile viewports */
             height: 100dvh; 
             overflow: hidden;
             margin: 0;
@@ -52,7 +59,24 @@
             background-color: #f8fafc;
             border-radius: 16px;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            overflow: hidden; /* Main wrapper hides overflow, inner slides will scroll */
+            overflow: hidden; 
+        }
+
+        /* --- DRAWING CANVAS --- */
+        .drawing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 50; /* Above content, below controls if any */
+            pointer-events: none; /* Let clicks pass through normally */
+            touch-action: none;
+        }
+        
+        .presentation-wrapper.pen-active .drawing-canvas {
+            pointer-events: auto; /* Enable drawing interactions */
+            cursor: crosshair !important;
         }
 
         /* --- SLIDE CONTAINERS --- */
@@ -72,7 +96,7 @@
             transition: opacity 0.4s ease-in-out, visibility 0.4s;
             z-index: 1;
             background-color: #f8fafc;
-            overflow-y: auto; /* Allows scrolling if content is too tall */
+            overflow-y: auto; 
             overflow-x: hidden;
         }
 
@@ -148,7 +172,7 @@
 
         /* Tables */
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .table-layout { width: 100%; max-width: 1000px; margin: 0 auto; min-width: 700px; } /* Ensures horizontal scroll on mobile */
+        .table-layout { width: 100%; max-width: 1000px; margin: 0 auto; min-width: 700px; } 
         .table-layout table { width: 100%; border-collapse: separate; border-spacing: 0; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .table-layout th, .table-layout td { padding: 15px 20px; text-align: center; border-bottom: 1px solid #e2e8f0; font-size: 18px; }
         .table-layout th { background-color: #003781; color: white; font-weight: 500; }
@@ -182,12 +206,13 @@
         .controls {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
             padding: 15px;
             background: #1e293b;
             width: 100%;
             justify-content: center;
             z-index: 100;
+            flex-wrap: wrap;
         }
 
         .controls button {
@@ -208,7 +233,22 @@
         .controls button:active:not(:disabled) { transform: translateY(0); }
         .controls button:disabled { background-color: #475569; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
 
-        .page-indicator { color: white; font-size: 16px; font-weight: 600; letter-spacing: 1px; }
+        .page-indicator { color: white; font-size: 16px; font-weight: 600; letter-spacing: 1px; min-width: 80px; text-align: center; }
+
+        /* Tools Buttons Styling */
+        .controls .divider {
+            width: 2px; height: 30px; background: rgba(255,255,255,0.2); margin: 0 10px;
+        }
+        .controls .tool-btn {
+            background-color: #334155;
+            color: #e2e8f0;
+        }
+        .controls .tool-btn:hover { background-color: #475569; }
+        .controls .tool-btn.active {
+            background-color: #ef4444 !important;
+            color: white;
+            box-shadow: inset 0 3px 6px rgba(0,0,0,0.3);
+        }
 
         /* =========================================
            RESPONSIVE DESIGN FOR MOBILE & TABLET
@@ -222,7 +262,7 @@
             .two-column.tiled { gap: 20px; }
             .image-wrapper, .hero-image-wrapper { height: 280px !important; }
             .tiled-content { flex-direction: column; gap: 20px; }
-            .slide-container { padding: 30px 20px; justify-content: flex-start; } /* Allow scrolling from top */
+            .slide-container { padding: 30px 20px; justify-content: flex-start; } 
             .content-area { justify-content: flex-start; }
             .credit { position: relative; bottom: 0; right: 0; text-align: center; margin-top: 30px; display: block; width: 100%; padding-bottom: 20px; }
             .qa-layout h2 { font-size: 45px; }
@@ -241,10 +281,10 @@
             .custom-bullets li { padding-left: 30px; }
             .image-wrapper, .hero-image-wrapper { height: 220px !important; }
             
-            /* Give controls a bit less padding on tiny screens */
-            .controls { gap: 10px; padding: 10px; }
-            .controls button { padding: 8px 15px; font-size: 14px; }
-            .page-indicator { font-size: 14px; }
+            .controls { gap: 8px; padding: 10px; }
+            .controls button { padding: 8px 12px; font-size: 14px; }
+            .controls .divider { display: none; } /* Hide divider on small screens */
+            .page-indicator { font-size: 14px; min-width: 60px; }
         }
 
     </style>
@@ -254,17 +294,20 @@
     <div class="viewer">
         <div class="presentation-wrapper" id="presentation-wrapper">
             
+            <!-- Canvas for Drawing Pen -->
+            <canvas id="drawingCanvas" class="drawing-canvas"></canvas>
+
             <!-- Slide 1: Title_Slide -->
             <div class="slide-container active">
                 <div class="hero-grid">
                     <div style="text-align: left;">
-                        <h1 class="main-title">Monday Talk #2:<br>เตรียมพร้อมขาย<br><span class="highlight highlight-large">"มาย ดับเบิล พลัส"</span></h1>
+                        <span class="badge">Session สำหรับตัวแทนใหม่</span>
+                        <h1 class="main-title">คุยกันแบบพี่น้อง:<br>เตรียมพร้อมขาย<br><span class="highlight highlight-large">"มาย ดับเบิล พลัส"</span></h1>
                         <p class="subtitle">คลาสสรุปข้อมูลแบบง่ายๆ ให้เข้าใจจุดขาย ผลประโยชน์ และกำไรที่ลูกค้าจะได้รับแบบทะลุปรุโปร่ง พร้อมออกไปนำเสนออย่างมั่นใจ</p>
                     </div>
                     <div style="display: flex; justify-content: center; align-items: center;">
                         <div class="hero-image-wrapper">
-                            <!-- รูปภาพหน้าปก -->
-                            <img src="image_c3ad79.png" alt="" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;" onerror="this.src='https://images.unsplash.com/photo-1556761175-5973dc0f32b7?q=80&w=1000&auto=format&fit=crop';">
+                            <img src="image_c3ad79.jpg" alt="" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;" onerror="this.src='https://images.unsplash.com/photo-1556761175-5973dc0f32b7?q=80&w=1000&auto=format&fit=crop';">
                         </div>
                     </div>
                 </div>
@@ -334,7 +377,7 @@
 
             <!-- Slide 5: Table (Calculation Example) -->
             <div class="slide-container">
-                <h2 class="slide-title">ลองคำนวณกำไรให้ดูชัดๆ (สมมติปันผล 4.5%) 📈</h2>
+                <h2 class="slide-title">ลองคำนวณกำไรให้ดูชัดๆ (สมมติปันผล 4%) 📈</h2>
                 <div class="content-area">
                     <p style="margin-bottom: 20px; text-align: center; width: 100%; font-weight:500; font-size: 20px;">ตัวอย่าง: แผน 25/20 | ทุนชีวิต 500,000 บาท | เบี้ยฯ สมมติ 34,000 บาท/ปี</p>
                     
@@ -346,7 +389,7 @@
                                         <th>สิ้นปีที่</th>
                                         <th>เบี้ยประกันสะสม</th>
                                         <th>ความคุ้มครองชีวิต</th>
-                                        <th>ปันผลสะสม (สมมติ 4.5%)</th>
+                                        <th>ปันผลสะสม (สมมติ 4%)</th>
                                         <th>รวมรับผลประโยชน์</th>
                                     </tr>
                                 </thead>
@@ -459,7 +502,16 @@
                 <div class="credit">Created by Oak Patchara</div>
             </div>
 
-            <!-- Slide 7: Table -->
+            <!-- Slide 7: Comparison -->
+            <div class="slide-container">
+                <h2 class="slide-title" style="text-align: center;">ลงทุนเอง VS มาย ดับเบิล พลัส (25/20) ⚖️</h2>
+                <div class="content-area">
+                    <img src="compare.jpg" alt="" style="max-width: 100%; max-height: 550px; object-fit: contain; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);" onerror="this.src='compare.png';">
+                </div>
+                <div class="credit">Created by Oak Patchara</div>
+            </div>
+
+            <!-- Slide 8: Table -->
             <div class="slide-container">
                 <h2 class="slide-title">4 แผนการออม ที่เลือกได้ตามใจลูกค้า 📅</h2>
                 <div class="content-area">
@@ -503,7 +555,7 @@
                 <div class="credit">Created by Oak Patchara</div>
             </div>
 
-            <!-- Slide 8: Image_Right_Text_Left (Riders Setup) -->
+            <!-- Slide 9: Image_Right_Text_Left (Riders Setup) -->
             <div class="slide-container">
                 <h2 class="slide-title">ทริคปิดการขาย: พ่วงสัญญาเพิ่มเติมได้! 🏥</h2>
                 <div class="content-area">
@@ -517,7 +569,7 @@
                                 <li>ประกันชดเชยรายได้</li>
                             </ul>
                             <div style="background-color: #f0fdf4; border-left: 6px solid #4CAF50; padding: 15px; border-radius: 8px; margin-top: 20px;">
-                                <p style="margin-bottom: 0; font-size: 16px; color: #166534; line-height: 1.5;"><strong>💡 บทสนทนาแนะนำ:</strong><br>"คุณลูกค้าครับ... เสมือนเราเอา <strong>'กำไร'</strong> หรือเงินปันผลที่งอกเงยจากเล่มนี้ ไปช่วยจ่ายค่าเบี้ยประกันสุขภาพให้ตัวเองแบบฟรีๆ เลยครับ คุ้มมาก!"</p>
+                                <p style="margin-bottom: 0; font-size: 16px; color: #166534; line-height: 1.5;"><strong>💡 บทสนทนาแนะนำ:</strong><br>"คุณลูกค้าครับ... เสมือนเราเอา <strong>'กำไร'</strong> หรือเงินปันผลที่งอกเงยจากเล่มนี้ ไปช่วยจ่ายค่าเบี้ยสัญญาเพิ่มเติมแบบฟรีๆ เลยครับ"</p>
                             </div>
                         </div>
                         <div>
@@ -530,7 +582,7 @@
                 <div class="credit">Created by Oak Patchara</div>
             </div>
 
-            <!-- Slide 9: Tiled_Text_With_Icons -->
+            <!-- Slide 10: Tiled_Text_With_Icons -->
             <div class="slide-container">
                 <h2 class="slide-title">ทำไมถึงมีโอกาสได้ผลตอบแทนสูง? 📈</h2>
                 <div class="content-area">
@@ -556,7 +608,7 @@
                 <div class="credit">Created by Oak Patchara</div>
             </div>
 
-            <!-- Slide 10: Tiled_Images -->
+            <!-- Slide 11: Tiled_Images -->
             <div class="slide-container">
                 <h2 class="slide-title">สรุป 3 เหตุผลที่ลูกค้าจะ "เซย์เยส" 💖</h2>
                 <div class="content-area">
@@ -584,7 +636,7 @@
                 <div class="credit">Created by Oak Patchara</div>
             </div>
 
-            <!-- Slide 11: Q&A -->
+            <!-- Slide 12: Q&A -->
             <div class="slide-container">
                 <div class="content-area">
                     <div class="qa-layout">
@@ -599,11 +651,18 @@
         </div>
     </div>
 
-    <!-- E-book Controls -->
+    <!-- E-book Controls & Presentation Tools -->
     <div class="controls">
         <button id="prevBtn" disabled><i class="fa-solid fa-chevron-left"></i> ก่อนหน้า</button>
-        <span class="page-indicator" id="pageIndicator">1 / 11</span>
+        <span class="page-indicator" id="pageIndicator">1 / 12</span>
         <button id="nextBtn">ถัดไป <i class="fa-solid fa-chevron-right"></i></button>
+        
+        <div class="divider"></div>
+        
+        <!-- Tools Buttons -->
+        <button id="laserBtn" class="tool-btn" title="จุดเลเซอร์ (ชี้ให้ลูกค้าดู)"><i class="fa-solid fa-location-crosshairs"></i> เลเซอร์</button>
+        <button id="penBtn" class="tool-btn" title="ปากกาวาดหน้าจอ"><i class="fa-solid fa-pen"></i> เขียน</button>
+        <button id="clearPenBtn" class="tool-btn" title="ลบรอยขีดเขียน"><i class="fa-solid fa-eraser"></i> ลบ</button>
     </div>
 
     <!-- Presentation Logic -->
@@ -615,59 +674,149 @@
             const pageIndicator = document.getElementById('pageIndicator');
             let currentSlide = 0;
 
+            // Tools Logic
+            const laserBtn = document.getElementById('laserBtn');
+            const penBtn = document.getElementById('penBtn');
+            const clearPenBtn = document.getElementById('clearPenBtn');
+            const canvas = document.getElementById('drawingCanvas');
+            const ctx = canvas.getContext('2d');
+            const wrapper = document.getElementById('presentation-wrapper');
+            
+            let isLaserActive = false;
+            let isPenActive = false;
+            let isDrawing = false;
+
+            // Resize Canvas to fit wrapper
+            function resizeCanvas() {
+                canvas.width = wrapper.offsetWidth;
+                canvas.height = wrapper.offsetHeight;
+            }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+
             function updateSlide() {
-                // Hide all slides and show active
+                // Clear drawing when changing slide
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
                 slides.forEach((slide, index) => {
                     slide.classList.remove('active');
                     if(index === currentSlide) {
                         slide.classList.add('active');
-                        slide.scrollTop = 0; // Scroll to top when slide changes (good for mobile)
+                        slide.scrollTop = 0; 
                     }
                 });
 
-                // Update buttons
                 prevBtn.disabled = currentSlide === 0;
                 nextBtn.disabled = currentSlide === slides.length - 1;
-
-                // Update text
                 pageIndicator.textContent = `${currentSlide + 1} / ${slides.length}`;
             }
 
-            // Button Listeners
+            // Slide Navigation
             prevBtn.addEventListener('click', () => {
-                if (currentSlide > 0) {
-                    currentSlide--;
-                    updateSlide();
-                }
+                if (currentSlide > 0) { currentSlide--; updateSlide(); }
             });
-
             nextBtn.addEventListener('click', () => {
-                if (currentSlide < slides.length - 1) {
-                    currentSlide++;
-                    updateSlide();
-                }
+                if (currentSlide < slides.length - 1) { currentSlide++; updateSlide(); }
             });
 
-            // Keyboard Listeners (Arrow Keys)
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'ArrowRight' || e.key === ' ') {
-                    if (currentSlide < slides.length - 1) {
-                        currentSlide++;
-                        updateSlide();
-                    }
+                    if (currentSlide < slides.length - 1) { currentSlide++; updateSlide(); }
                 }
                 if (e.key === 'ArrowLeft') {
-                    if (currentSlide > 0) {
-                        currentSlide--;
-                        updateSlide();
-                    }
+                    if (currentSlide > 0) { currentSlide--; updateSlide(); }
                 }
             });
 
-            // Note: Removed JS scaling function. 
-            // We are now using pure CSS (Flexbox & Media Queries) for a true responsive experience on mobile!
-            
-            updateSlide(); // Initial setup
+            // --- TOOLS CONTROLS ---
+
+            // 1. Laser Toggle
+            laserBtn.addEventListener('click', () => {
+                isLaserActive = !isLaserActive;
+                if(isLaserActive) {
+                    document.body.classList.add('laser-active');
+                    laserBtn.classList.add('active');
+                    // Turn off pen if laser is turned on
+                    if(isPenActive) penBtn.click();
+                } else {
+                    document.body.classList.remove('laser-active');
+                    laserBtn.classList.remove('active');
+                }
+            });
+
+            // 2. Pen Toggle
+            penBtn.addEventListener('click', () => {
+                isPenActive = !isPenActive;
+                if(isPenActive) {
+                    wrapper.classList.add('pen-active');
+                    penBtn.classList.add('active');
+                    // Turn off laser if pen is turned on
+                    if(isLaserActive) laserBtn.click();
+                } else {
+                    wrapper.classList.remove('pen-active');
+                    penBtn.classList.remove('active');
+                }
+            });
+
+            // 3. Clear Pen
+            clearPenBtn.addEventListener('click', () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            });
+
+            // --- DRAWING ENGINE ---
+            function startDrawing(e) {
+                if (!isPenActive) return;
+                isDrawing = true;
+                draw(e);
+            }
+
+            function stopDrawing() {
+                if (!isPenActive) return;
+                isDrawing = false;
+                ctx.beginPath(); // Reset path so next line doesn't connect
+            }
+
+            function draw(e) {
+                if (!isDrawing || !isPenActive) return;
+                e.preventDefault(); // Stop scrolling on mobile while drawing
+
+                const rect = canvas.getBoundingClientRect();
+                let clientX = e.clientX;
+                let clientY = e.clientY;
+                
+                // Support Touch Devices
+                if (e.touches && e.touches.length > 0) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                }
+
+                const x = clientX - rect.left;
+                const y = clientY - rect.top;
+
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = '#ef4444'; // Red Ink
+
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+            }
+
+            // Mouse Events
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+            canvas.addEventListener('mousemove', draw);
+
+            // Touch Events (Tablets/Phones)
+            canvas.addEventListener('touchstart', startDrawing, {passive: false});
+            canvas.addEventListener('touchend', stopDrawing);
+            canvas.addEventListener('touchcancel', stopDrawing);
+            canvas.addEventListener('touchmove', draw, {passive: false});
+
+            updateSlide(); 
         });
     </script>
 </body>
